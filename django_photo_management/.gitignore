@@ -1,0 +1,37 @@
+# 虚拟环境（迁移后在目标机重新 python -m venv + pip install）
+.venv/
+venv/
+env/
+
+# 环境与密钥（勿提交真实密码）
+.env
+.env.local
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Django / 本地数据（代码库与数据分开备份，见下方说明）
+*.sqlite3
+db.sqlite3
+media/
+
+# 日志与运行时
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 测试与打包
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/

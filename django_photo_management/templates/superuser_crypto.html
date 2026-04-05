@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% block page_title %}秘钥配置与备份{% endblock %}
+{% block content %}
+<h2>秘钥配置与备份</h2>
+<p class="text-danger"><strong>仅限超级管理员。</strong>本页可查看 Fernet 密钥、解密后的 Oracle 数据库密码，并导出 JSON 备份。请勿在公共网络或不安全终端操作。</p>
+
+<div id="crypto-status" class="mb-3 text-muted">加载中…</div>
+
+<div class="card mb-3">
+    <div class="card-header">当前状态</div>
+    <div class="card-body">
+        <ul class="mb-0" id="status-list"></ul>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">保存 Fernet 密钥到数据库</div>
+    <div class="card-body">
+        <p class="small text-muted">优先级：环境变量 <code>ORACLE_SYNC_FERNET_KEY</code> &gt; 本页保存 &gt; 由 <code>SECRET_KEY</code> 派生。若环境变量已设置，本页无法覆盖。</p>
+        <div class="mb-2">
+            <label class="form-label" for="newFernetKey">新密钥（留空并保存可清除数据库中的密钥）</label>
+            <input type="password" class="form-control font-monospace" id="newFernetKey" autocomplete="new-password" placeholder="粘贴 Fernet.generate_key() 生成的字符串">
+        </div>
+        <button type="button" class="btn btn-primary" id="btnSaveKey">保存到数据库</button>
+        <span id="saveKeyMsg" class="ms-2"></span>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">读取敏感信息（点击后显示在下方）</div>
+    <div class="card-body">
+        <button type="button" class="btn btn-outline-secondary me-2" id="btnRevealFernet">显示当前生效的 Fernet 密钥</button>
+        <button type="button" class="btn btn-outline-danger" id="btnRevealOracle">显示 Oracle 连接明文密码</button>
+        <pre id="revealBox" class="mt-3 p-2 bg-light border rounded small" style="white-space:pre-wrap;word-break:break-all;display:none;"></pre>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">导出备份文件</div>
+    <div class="card-body">
+        <p class="small text-muted">下载 JSON 文件，内含当前生效的 Fernet 密钥；可选是否附带 Oracle 明文密码。</p>
+        <a class="btn btn-success me-2" id="linkExportKey" href="/api/photos/superuser_crypto/export/?include_oracle_password=0">仅导出密钥 JSON</a>
+        <button type="button" class="btn btn-warning" id="btnExportFull">导出密钥 + Oracle 密码</button>
+    </div>
+</div>
+
+<script>
+const csrfToken = '{{ csrf_token }}';
+
+async function loadStatus() {
+    const res = await fetch('/api/photos/superuser_crypto/status/', { credentials: 'same-origin' });
+    if (res.status === 403) {
+        document.getElementById('crypto-status').innerHTML = '<span class="text-danger">无权限</span>';
+        return;
+    }
+    const d = await res.json();
+    document.getElementById('crypto-status').textContent = '';
+    document.getElementById('status-list').innerHTML = `
+        <li>生效来源：<strong>${d.effective_source_label}</strong></li>
+        <li>环境变量已设置：${d.env_key_set ? '是' : '否'}</li>
+        <li>数据库已保存密钥：${d.database_key_set ? '是' : '否'}</li>
+        <li>密钥指纹（SHA256 前 16 位）：<code>${d.key_fingerprint || '—'}</code></li>
+        <li>Oracle 配置存在：${d.oracle_config_exists ? '是' : '否'}；已保存密码：${d.oracle_has_saved_password ? '是' : '否'}</li>
+    `;
+}
+
+function showReveal(text) {
+    const el = document.getElementById('revealBox');
+    el.style.display = 'block';
+    el.textContent = text;
+}
+
+document.getElementById('btnSaveKey').onclick = async () => {
+    const msg = document.getElementById('saveKeyMsg');
+    msg.textContent = '';
+    const v = document.getElementById('newFernetKey').value;
+    const res = await fetch('/api/photos/superuser_crypto/save_key/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ fernet_key: v })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        msg.innerHTML = `<span class="text-danger">${data.error || '保存失败'}</span>`;
+        return;
+    }
+    msg.innerHTML = '<span class="text-success">已保存</span>';
+    document.getElementById('newFernetKey').value = '';
+    loadStatus();
+};
+
+document.getElementById('btnRevealFernet').onclick = async () => {
+    const res = await fetch('/api/photos/superuser_crypto/reveal/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ target: 'fernet' })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        showReveal(data.error || '失败');
+        return;
+    }
+    showReveal(data.warning + '\n\n' + data.fernet_key);
+};
+
+document.getElementById('btnRevealOracle').onclick = async () => {
+    const res = await fetch('/api/photos/superuser_crypto/reveal/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ target: 'oracle_password' })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        showReveal(data.error || '失败');
+        return;
+    }
+    showReveal(data.warning + '\n\n' + data.password);
+};
+
+document.getElementById('btnExportFull').onclick = () => {
+    window.location.href = '/api/photos/superuser_crypto/export/?include_oracle_password=1';
+};
+
+loadStatus();
+</script>
+{% endblock %}

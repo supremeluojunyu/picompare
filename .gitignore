@@ -1,0 +1,4 @@
+# 仓库根目录补充（子目录 django_photo_management/.gitignore 已覆盖多数规则）
+.DS_Store
+Thumbs.db
+*.bak

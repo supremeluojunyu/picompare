@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | 昆明学院教务处学生照片采集系统{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">昆明学院教务处学生照片采集系统</a></h1>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{# 秘钥配置在本项目前台，不在 Admin 模型列表中；超级用户从此处进入 #}
+{% block userlinks %}
+{% if user.is_superuser %}
+<a href="/superuser/crypto/">秘钥配置与备份</a> /
+{% endif %}
+{{ block.super }}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

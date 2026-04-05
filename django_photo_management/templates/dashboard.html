@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block page_title %}数据看板{% endblock %}
+{% block content %}
+<h2>数据统计</h2>
+<p class="text-muted small">更多功能请使用顶部导航：<strong>批量上传</strong>、<strong>待确认</strong>。</p>
+<div id="stats"></div>
+<script>
+fetch('/api/photos/statistics/')
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('stats').innerHTML = `
+            <p>近7天上传数: ${data.week_uploads}</p>
+            <p>其中新建基准照: ${data.week_baselines ?? 0}</p>
+            <p>近7天参与比对的张数: ${data.week_compared ?? 0}</p>
+            <p>人脸比对通过率（不含基准照）: ${(data.pass_rate * 100).toFixed(2)}%</p>
+        `;
+    })
+    .catch(() => {
+        document.getElementById('stats').innerHTML = '<p class="text-danger">加载失败，请先登录</p>';
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block page_title %}工作台{% endblock %} — 昆明学院教务处学生照片采集系统</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand navbar-brand-system" href="{% url 'dashboard' %}">昆明学院教务处学生照片采集系统</a>
+            {% if user.is_authenticated %}
+            <nav class="nav-links" aria-label="功能菜单">
+                <a href="{% url 'dashboard' %}" {% if request.resolver_match and request.resolver_match.url_name == 'dashboard' %}class="nav-active"{% endif %}>数据看板</a>
+                {% if user.role == 'admin' or user.role == 'secretary' %}
+                <a href="{% url 'upload_page' %}" {% if request.resolver_match and request.resolver_match.url_name == 'upload_page' %}class="nav-active"{% endif %}>批量上传</a>
+                {% endif %}
+                <a href="{% url 'pending_page' %}" {% if request.resolver_match and request.resolver_match.url_name == 'pending_page' %}class="nav-active"{% endif %}>待确认</a>
+                {% if user.is_superuser %}
+                <a href="{% url 'superuser_crypto_page' %}" {% if request.resolver_match and request.resolver_match.url_name == 'superuser_crypto_page' %}class="nav-active"{% endif %}>秘钥配置</a>
+                {% endif %}
+                {% if user.is_staff %}
+                <a href="/admin/">管理后台</a>
+                {% endif %}
+                <a href="{% url 'home' %}">首页</a>
+            </nav>
+            <div class="navbar-user">
+                <span class="text-light">{% if user.department %}{{ user.department }} · {% endif %}{{ user.get_role_display }}</span>
+                <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-light">登出</a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

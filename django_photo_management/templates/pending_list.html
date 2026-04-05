@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block page_title %}待确认{% endblock %}
+{% block content %}
+<h2>待确认照片列表</h2>
+{% if oracle_sync_auto %}
+<p class="text-muted small">已启用 Oracle 同步：接受待确认照片并入库后将自动写入 Oracle。</p>
+{% endif %}
+{% if oracle_sync_show_opt_in %}
+<div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="pendingSyncToOracle" {% if oracle_sync_default_checked %}checked{% endif %}>
+    <label class="form-check-label" for="pendingSyncToOracle">接受时同时将照片写入 Oracle</label>
+</div>
+{% endif %}
+<div id="pending-container"></div>
+<script>
+async function load() {
+    const res = await fetch('/api/photos/pending_list/', { credentials: 'same-origin' });
+    if (res.status === 403 || res.status === 401) {
+        document.getElementById('pending-container').innerHTML = '<p class="text-danger">无法加载（请先登录）</p>';
+        return;
+    }
+    const data = await res.json();
+    const container = document.getElementById('pending-container');
+    if (!data.length) {
+        container.innerHTML = '<p>暂无待确认项</p>';
+        return;
+    }
+    container.innerHTML = data.map(p => `
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>编号: ${p.person_number}</h5>
+                <p>原因: ${p.adjust_reason}</p>
+                <div class="row">
+                    <div class="col-md-6"><img src="data:image/jpeg;base64,${p.original_image_base64}" class="img-fluid" alt="原图"></div>
+                    <div class="col-md-6"><img src="data:image/jpeg;base64,${p.adjusted_image_base64}" class="img-fluid" alt="调整后"></div>
+                </div>
+                <button type="button" class="btn btn-success mt-2" onclick="confirmPhoto(${p.id}, 'accept')">接受</button>
+                <button type="button" class="btn btn-danger mt-2" onclick="confirmPhoto(${p.id}, 'reject')">拒绝</button>
+            </div>
+        </div>
+    `).join('');
+}
+async function confirmPhoto(id, action) {
+    const payload = { pending_id: id, action };
+    {% if oracle_sync_show_opt_in %}
+    const po = document.getElementById('pendingSyncToOracle');
+    if (action === 'accept' && po && po.checked) {
+        payload.sync_to_oracle = true;
+    }
+    {% endif %}
+    await fetch('/api/photos/confirm_pending/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(payload)
+    });
+    load();
+}
+load();
+</script>
+{% endblock %}

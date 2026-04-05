@@ -1,0 +1,25 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls %}
+
+{% block object-tools-items %}
+{{ block.super }}
+<li>
+    <a href="{% url 'admin:photo_access_photomanagementgroup_download_template' %}" class="addlink">下载 Excel 模板</a>
+</li>
+{% endblock %}
+
+{% block content %}
+<div class="module" style="margin-bottom: 24px; padding: 12px 16px; background: #f8f8f8; border: 1px solid #ddd; border-radius: 4px;">
+    <h2 style="margin-top: 0;">从 Excel 批量导入管理组</h2>
+    <p class="help" style="margin-bottom: 12px;">
+        首行为表头（勿删改列名）。列：<strong>组名称</strong>（必填，唯一）、<strong>代码</strong>（可选，须为英文/数字/连字符/下划线）、<strong>说明</strong>（可空）。<br>
+        已存在的<strong>组名称</strong>将更新代码与说明。<strong>超级管理员、管理员或教学秘书</strong>（须具备本页对应权限）可执行导入。
+    </p>
+    <form method="post" action="{% url 'admin:photo_access_photomanagementgroup_import_xlsx' %}" enctype="multipart/form-data" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+        {% csrf_token %}
+        <input type="file" name="excel_file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+        <input type="submit" class="default" value="上传并导入">
+    </form>
+</div>
+{{ block.super }}
+{% endblock %}
