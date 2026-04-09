@@ -1,0 +1,13 @@
+{
+  "folders": [
+    {
+      "name": "picompare（根）",
+      "path": "."
+    },
+    {
+      "name": "django_photo_management",
+      "path": "django_photo_management"
+    }
+  ],
+  "settings": {}
+}
